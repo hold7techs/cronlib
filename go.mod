@@ -1,4 +1,4 @@
-module github.com/hold7techs/go-cronlib
+module github.com/hold7techs/cronlib
 
 go 1.17
 
