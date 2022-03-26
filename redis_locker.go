@@ -2,6 +2,7 @@ package cronlib
 
 import (
 	"context"
+	"sync"
 	"time"
 
 	"github.com/bsm/redislock"
@@ -17,6 +18,7 @@ type rdsLockInfo struct {
 
 // RedisLocker 基于Redis实现的分布式锁，
 type RedisLocker struct {
+	mu         *sync.Mutex
 	rdsClient  *redis.Client
 	lockClient *redislock.Client
 	locks      map[string]*rdsLockInfo
@@ -42,6 +44,7 @@ func NewRedisLocker(redisURL string) (*RedisLocker, error) {
 	rdsClient := redis.NewClient(opts)
 
 	return &RedisLocker{
+		mu:         &sync.Mutex{},
 		rdsClient:  rdsClient,
 		lockClient: redislock.New(rdsClient),
 		locks:      make(map[string]*rdsLockInfo),
@@ -57,11 +60,13 @@ func (r *RedisLocker) Lock(key string, ttl time.Duration) error {
 	if err != nil {
 		return errors.Wrap(err, "redis locker obtain lock fail")
 	}
+	r.mu.Lock()
 	r.locks[key] = &rdsLockInfo{
 		ctx:    ctx,
 		key:    key,
 		locker: locker,
 	}
+	r.mu.Unlock()
 	return nil
 }
 

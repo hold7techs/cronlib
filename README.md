@@ -4,9 +4,15 @@
 
 基于分布式锁的操作，用以解决在集群模式下，多cron可能在同一时刻发起调度的问题
 
-## 使用
+## cronlib 快速使用流程
+1. 初始化Job业务逻辑：定义Job定期执行具体业务逻辑
+2. 初始化Job任务: `NewJob()`方法创建调度job
+3. 初始化Scheduler调度器
+4. 添加Job任务到调度器
+5. 调度器启动
 
-### 单机环境下执行cron调度
+### 简单的定时任务示例
+
 ```
 func ExampleStartTest() {
 	var job1Fn = func(jobID int) {
@@ -18,7 +24,7 @@ func ExampleStartTest() {
 	job2 := NewJob("job2", func() { job1Fn(2) }, "*/2 * * * *")
 
 	// 准备scheduler调度器
-	locker, err := NewRedisLocker("redis://user:password@localhost:6789/3?dial_timeout=3&db=1&read_timeout=6s&max_retries=2")
+	locker, err := NewRedisLocker("redis://127.0.0.1:6379")
 	if err != nil {
 		log.Fatalf("parse redis url got err: %s", err)
 	}
@@ -37,4 +43,12 @@ func ExampleStartTest() {
 	// job执行
 	crond.Start()
 }
+```
+
+### redis 依赖
+
+通过docker快速启动一个本地redis实例：
+
+```shell
+$ docker-compose up -d
 ```

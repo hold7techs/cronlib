@@ -2,6 +2,10 @@ package cronlib
 
 import (
 	"context"
+	"fmt"
+	"math/rand"
+	"strconv"
+	"sync"
 	"testing"
 	"time"
 )
@@ -11,8 +15,7 @@ func TestRedisLocker_Lock(t *testing.T) {
 	// 本地测试依赖redis实例
 	t.SkipNow()
 
-	redisURL := "redis://127.0.0.1:6379/0?dial_timeout=3&read_timeout=6s&max_retries=2"
-	locker, err := NewRedisLocker(redisURL)
+	locker, err := NewRedisLocker("redis://127.0.0.1:6379")
 	if err != nil {
 		t.Fatalf("cron new redis locker got err: %s", err)
 	}
@@ -41,4 +44,42 @@ func TestRedisLocker_Lock(t *testing.T) {
 		})
 	}
 
+}
+
+// BenchmarkRedisLockerLock 并发测试，依赖redis
+func BenchmarkRedisLockerLock(b *testing.B) {
+	b.SkipNow()
+
+	rdsLocker, err := NewRedisLocker("redis://127.0.0.1:6379")
+	if err != nil {
+		b.Fatal("redis connect error")
+	}
+
+	for i := 0; i < b.N; i++ {
+		rdsLocker.Lock(strconv.FormatUint(rand.Uint64(), 10), 10*time.Millisecond)
+	}
+}
+
+// TestRedisLockerLock 数据竟态检测: go test -run=TestRedisLockerLock -race -v
+func TestRedisLockerLock(t *testing.T) {
+	t.SkipNow()
+
+	rand.Seed(time.Now().UnixNano())
+	rdsLocker, err := NewRedisLocker("redis://127.0.0.1:6379")
+	if err != nil {
+		t.Fatal("redis connect error")
+	}
+
+	wg := sync.WaitGroup{}
+	sema := make(chan bool, 200)
+	for i := 0; i < 1e4; i++ {
+		wg.Add(1)
+		sema <- true
+		go func() {
+			key := fmt.Sprintf("key:%d", rand.Uint64())
+			rdsLocker.Lock(key, 10*time.Millisecond)
+			wg.Done()
+			<-sema
+		}()
+	}
 }
