@@ -1,14 +1,11 @@
-# cronlib
+package cronlib
 
-`cronlib`基于`github.com/go-co-op/gocron`的基础上，添加了redis分布式锁，并简化了定时任务调度器的使用；
+import (
+	"log"
+)
 
-基于分布式锁的操作，用以解决在集群模式下，多cron可能在同一时刻发起调度的问题
-
-## 使用
-
-### 单机环境下执行cron调度
-```
-func ExampleStartTest() {
+// ExampleStart 开始
+func ExampleStart() {
 	var job1Fn = func(jobID int) {
 		log.Printf("exec job[#%d] fn", jobID)
 	}
@@ -24,8 +21,8 @@ func ExampleStartTest() {
 	}
 
 	crond := NewScheduler(&Config{
-		Async:            false,           // 不阻塞主协程
-		SingletonModeAll: true,            // 调度器不会重复调度同类型新的job任务
+		Async:            false, // 不阻塞主协程
+		SingletonModeAll: true,  // 调度器不会重复调度同类型新的job任务
 	}, locker)
 
 	// 添加job任务
@@ -37,4 +34,3 @@ func ExampleStartTest() {
 	// job执行
 	crond.Start()
 }
-```
